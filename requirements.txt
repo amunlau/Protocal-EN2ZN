@@ -1,0 +1,4 @@
+# v1.0.0 tested runtime dependencies. OCR/renderers are installed only when needed.
+pypdf==6.10.0
+pdfplumber==0.11.9
+python-docx==1.2.0

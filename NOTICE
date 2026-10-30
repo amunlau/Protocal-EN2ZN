@@ -1,0 +1,14 @@
+Required Notice: Copyright (c) 2026 protocol-en2zh contributors.
+Required Notice: This work is based on protocol-en2zh, the English-to-Simplified-Chinese protocol translation skill. Retain this project attribution when distributing original or modified copies.
+
+This repository's original skill instructions, documentation, configuration,
+and Python scripts are distributed under the PolyForm Noncommercial License
+1.0.0 in LICENSE. Its Notices section requires preserving the Required Notice
+lines above with copies of any part of the project, including modified copies.
+
+Third-party packages and linked research retain their respective licenses.
+They are not relicensed by this repository. No third-party PDF specifications,
+model weights, or user translation projects are bundled in this release.
+
+The license for this tool does not grant rights to source PDFs or claim
+ownership of translations created from user-provided documents.

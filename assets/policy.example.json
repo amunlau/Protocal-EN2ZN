@@ -1,0 +1,24 @@
+{
+  "source_version": "填写源协议正式名称与版本",
+  "scope": "全文；若为指定章节，填写准确范围",
+  "normative": {
+    "source_definition": "填写源协议规范性关键字定义的位置与结论，再按其语义调整以下约定",
+    "requirement": "应",
+    "prohibition": "不应",
+    "recommendation": "宜",
+    "negative_recommendation": "不宜",
+    "permission": "可",
+    "no_requirement": "无须",
+    "capability": "能",
+    "possibility": "可能"
+  },
+  "style": {
+    "language": "zh-CN",
+    "register": "中文标准/协议体；保留全部技术语义",
+    "first_occurrence": "中文（英文或缩写）",
+    "chapter_abbreviation_repeat": false,
+    "identifiers": "保留大小写、数值、单位、标识符和原编号",
+    "bilingual": false
+  },
+  "glossary": []
+}
