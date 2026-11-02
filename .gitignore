@@ -13,6 +13,8 @@ htmlcov/
 # Build outputs (attach a versioned ZIP to GitHub Releases instead)
 /dist/
 /build/
+/*.zip
+/*.tar.gz
 .test-tmp/
 *.tmp
 *.log
@@ -23,11 +25,17 @@ htmlcov/
 !.env.example
 .vscode/
 .idea/
+.claude/
+.codex/
+.agents/
+.cursor/
+.gemini/
 .DS_Store
 Thumbs.db
 Desktop.ini
 
 # Private inputs, translations and resumable project state
+/参考翻译文档/
 *.pdf
 *.docx
 *.sqlite3
@@ -44,3 +52,10 @@ Desktop.ini
 /exports/
 /backups/
 /runtime/
+/qa/
+/inventory.jsonl
+/policy.json
+/output-policy.json
+/coverage.json
+/furniture-report*.json
+/furniture-decisions*.json

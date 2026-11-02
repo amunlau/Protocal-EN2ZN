@@ -9,10 +9,12 @@ from statistics import median
 import sys
 from check_environment import configure_stdio
 import json
+from importlib.metadata import version
 
 from translation_project import atomic_json, digest, file_hash, need, read_json
+from pdf_probe import source_snapshot
 
-VERSION = 2
+VERSION = 3
 EXCLUSION_CLASSES = {"watermark", "header", "footer", "page_number"}
 PAGE_NUMBER = re.compile(r"^(?:page\s+)?(?:\d+(?:[-–]\d+)?|[ivxlcdm]+)(?:\s*(?:of|/)\s*(?:\d+|[ivxlcdm]+))?$", re.I)
 
@@ -33,9 +35,20 @@ def read_signed(path):
 
 
 def verify_manifest_source(manifest):
+    need(not manifest.get("source_invalidated"), "提取期间源文件变化，布局缓存已失效；请使用新的缓存目录")
     source = Path(manifest["source"])
     need(source.is_file(), "源 PDF 不在记录位置；对相同源文件重新 extract 以更新位置")
     need(file_hash(source) == manifest["source_sha256"], "源 PDF 已变化，禁止套用旧布局和排除决定")
+
+
+def verify_layout_inputs(cache, manifest, page_hashes):
+    """Recheck a read snapshot before publishing a report or completion receipt."""
+    current = read_signed(cache / "manifest.json")
+    need(current["sha256"] == manifest["sha256"], "处理期间布局清单变化，须重新分析与审查")
+    for page_number, expected in page_hashes.items():
+        page = read_signed(cache / "pages" / f"{int(page_number):06d}.json")
+        need(page["sha256"] == expected, "处理期间页面缓存变化，须重新分析与审查")
+    verify_manifest_source(current)
 
 
 def char_features(char):
@@ -92,14 +105,15 @@ def extract(source, cache, start=1, end=None):
     cache.mkdir(parents=True, exist_ok=True)
     hashed = file_hash(source)
     manifest_path = cache / "manifest.json"
-    engine = {"adapter": VERSION, "pdfplumber": pdfplumber.__version__}
+    engine = {"adapter": VERSION, "pdfplumber": pdfplumber.__version__, "pdfminer.six": version("pdfminer.six")}
     if manifest_path.exists():
         old = read_signed(manifest_path)
+        need(not old.get("source_invalidated"), "上次提取期间源文件变化，缓存已失效；请使用新的布局缓存目录")
         need(old["source_sha256"] == hashed and old["engine"] == engine, "源文件或提取器版本改变，请使用新的 layout-cache 目录")
     else:
         need(not any(cache.iterdir()), "布局缓存目录已有其他文件，请使用新目录")
     reused = extracted = 0
-    with pdfplumber.open(source) as document:
+    with source_snapshot(source, hashed, manifest_path, signed), pdfplumber.open(source) as document:
         total = len(document.pages)
         last = total if end is None else end
         need(1 <= start <= last <= total, "页范围越界")
@@ -211,6 +225,7 @@ def analyze(cache, report_path, start=1, end=None):
                      "page_count": manifest["page_count"], "page_hashes": hashes, "span_counts": counts,
                      "visual_review_required_pages": visual, "groups": groups, "candidates": candidates,
                      "note": "只列候选；位置、重复、字号、旋转、颜色、Artifact 标记均不能单独触发删除。无候选也不证明无水印。"})
+    verify_layout_inputs(cache, manifest, hashes)
     atomic_json(report_path, report)
     return {"report": str(Path(report_path).resolve()), "sha256": report["sha256"], "candidates": len(candidates), "groups": len(groups), "range": [start, last]}
 
@@ -225,7 +240,9 @@ def validate_decision(decision):
 
 def apply(cache, report_path, decisions_path, output):
     cache, output = Path(cache).resolve(), Path(output).resolve()
+    report_path, decisions_path = Path(report_path).resolve(), Path(decisions_path).resolve()
     need(output != cache and cache not in output.parents and output not in cache.parents, "输出必须与布局缓存分开，禁止覆盖源缓存")
+    need(not report_path.is_relative_to(output) and not decisions_path.is_relative_to(output), "报告和处置意见必须保存在输出目录之外，禁止覆盖审查输入")
     report = read_signed(report_path)
     need(report.get("version") == VERSION, "报告版本已变化，请重新分析与审查")
     first, last = report["page_range"]
@@ -284,10 +301,12 @@ def apply(cache, report_path, decisions_path, output):
     receipt_path = output / "receipt.json"
     if receipt_path.exists():
         receipt_path.unlink()
-    atomic_json(output / "manifest.json", signed({"processing_sha256": signature, "source_sha256": report["source_sha256"], "page_range": report["page_range"]}))
+    output_manifest = signed({"processing_sha256": signature, "source_sha256": report["source_sha256"], "page_range": report["page_range"]})
+    atomic_json(output / "manifest.json", output_manifest)
     exclusions, outputs = [], {}
     for page_number, source_page_hash in report["page_hashes"].items():
         page = read_signed(cache / "pages" / f"{int(page_number):06d}.json")
+        need(page["sha256"] == source_page_hash, "页面缓存变化，禁止将新内容标为旧 source_page_sha256")
         retained, removed = [], []
         for span in page["spans"]:
             decision = resolved.get(span["id"])
@@ -310,8 +329,18 @@ def apply(cache, report_path, decisions_path, output):
         if not unchanged:
             atomic_json(destination, record)
         outputs[page_number] = record["sha256"]
-    atomic_json(output / "exclusions.json", signed({"processing_sha256": signature, "items": exclusions}))
+    exclusion_record = signed({"processing_sha256": signature, "items": exclusions})
+    atomic_json(output / "exclusions.json", exclusion_record)
     atomic_json(output / "decisions.json", decisions)
+    verify_layout_inputs(cache, manifest, report["page_hashes"])
+    need(read_signed(report_path)["sha256"] == report["sha256"], "处理期间分析报告变化，须重新审查")
+    need(digest(read_json(decisions_path)) == digest(decisions), "处理期间处置意见变化，须按新决定重做")
+    for page_number, expected in outputs.items():
+        page = read_signed(output / "pages" / f"{int(page_number):06d}.json")
+        need(page["sha256"] == expected, "完成前正文候选页变化，输出不完整，请重跑")
+    need(read_signed(output / "exclusions.json")["sha256"] == exclusion_record["sha256"] and
+         digest(read_json(output / "decisions.json")) == digest(decisions), "完成前排除清单或处置副本变化，请重跑")
+    need(read_signed(output / "manifest.json")["sha256"] == output_manifest["sha256"], "完成前输出清单变化，请重跑")
     atomic_json(output / "receipt.json", signed({"processing_sha256": signature, "page_hashes": outputs, "excluded_count": len(exclusions), "exclusions_sha256": file_hash(output / "exclusions.json"), "decisions_sha256": file_hash(output / "decisions.json"), "scope": "reviewed_text_layer_only"}))
     return {"output": str(output), "excluded": len(exclusions), "pages": len(outputs), "processing_sha256": signature}
 

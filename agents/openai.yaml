@@ -1,4 +1,4 @@
 interface:
-  display_name: "协议规范英译中 DOCX"
-  short_description: "长篇协议 PDF 中文翻译，统一术语与规范行文，先确认样本并支持中断续译"
-  default_prompt: "使用 $protocol-en2zh 翻译指定协议 PDF，先检查现有进度；达到 20 页时先交付样本并等待我的确认。"
+  display_name: "协议、技术文档与论文英译中"
+  short_description: "英文协议、白皮书和论文转中文 Word 与保版式 PDF，统一术语，先确认样本并支持续译"
+  default_prompt: "使用 $protocol-en2zh 翻译指定英文 PDF，先检查已有进度，输出中文 Word 和保版式 PDF；达到 20 页时先交付双格式样本并等待我的确认。"

@@ -1,4 +1,5 @@
-# v1.0.0 tested runtime dependencies. OCR/renderers are installed only when needed.
+# protocol-en2zh core dependencies. Optional native PDF output: PyMuPDF==1.26.7.
+# OCR/renderers are installed only when needed; check their own licenses.
 pypdf==6.10.0
 pdfplumber==0.11.9
 python-docx==1.2.0

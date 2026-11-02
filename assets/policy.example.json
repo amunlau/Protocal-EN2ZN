@@ -1,8 +1,9 @@
 {
-  "source_version": "填写源协议正式名称与版本",
+  "document_type": "protocol",
+  "source_version": "填写源文件正式名称与版本；document_type 按实际改为 protocol、technical 或 paper",
   "scope": "全文；若为指定章节，填写准确范围",
   "normative": {
-    "source_definition": "填写源协议规范性关键字定义的位置与结论，再按其语义调整以下约定",
+    "source_definition": "协议填写规范性关键字定义；技术报告/论文若无规范体系，写明不机械套用本表，按具体语境保留论断强度",
     "requirement": "应",
     "prohibition": "不应",
     "recommendation": "宜",
@@ -14,8 +15,8 @@
   },
   "style": {
     "language": "zh-CN",
-    "register": "中文标准/协议体；保留全部技术语义",
-    "first_occurrence": "中文（英文或缩写）",
+    "register": "按 document_type 选择中文标准/协议体、技术说明体或学术体；保留全部技术语义及论断强度",
+    "first_occurrence": "按术语条目的 translate / retain / first_use 策略；first_use 绑定最终文档中的具体实例",
     "chapter_abbreviation_repeat": false,
     "identifiers": "保留大小写、数值、单位、标识符和原编号",
     "bilingual": false

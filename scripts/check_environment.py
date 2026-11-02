@@ -17,6 +17,9 @@ def module_check(module, distribution=None):
     import importlib.metadata
     try:
         imported = importlib.import_module(module)
+        if module == "pymupdf":
+            if not all(callable(getattr(imported, name, None)) for name in ("open", "Font", "Archive")) or not hasattr(getattr(imported, "Page", None), "insert_htmlbox"):
+                raise RuntimeError("PyMuPDF native output API is unavailable in this interpreter")
         if module == "sqlite3":
             db = imported.connect(":memory:")
             try:
@@ -40,7 +43,8 @@ def module_check(module, distribution=None):
 def inspect_environment():
     import shutil
     modules = {name: module_check(name, distribution) for name, distribution in (
-        ("sqlite3", None), ("pypdf", None), ("pdfplumber", None), ("docx", "python-docx"))}
+        ("sqlite3", None), ("pypdf", None), ("pdfplumber", None), ("docx", "python-docx"),
+        ("pymupdf", "PyMuPDF"))}
     python_ok = sys.version_info >= (3, 10)
     ledger = python_ok and modules["sqlite3"]["available"]
     return {
@@ -51,6 +55,7 @@ def inspect_environment():
             "pdf-text": ledger and modules["pypdf"]["available"],
             "pdf-layout": ledger and modules["pdfplumber"]["available"],
             "docx": python_ok and modules["docx"]["available"],
+            "pdf-output": ledger and modules["pymupdf"]["available"],
         },
         "executables_on_path": {name: shutil.which(name) for name in (
             "pdftoppm", "mutool", "soffice", "libreoffice", "tesseract", "ocrmypdf")},
@@ -64,7 +69,7 @@ def required_missing(report, requirements):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--require", action="append", default=[], choices=("ledger", "pdf-text", "pdf-layout", "docx"),
+    parser.add_argument("--require", action="append", default=[], choices=("ledger", "pdf-text", "pdf-layout", "docx", "pdf-output"),
                         help="Fail only when a capability needed for this stage is missing; repeat as needed.")
     args = parser.parse_args()
     report = inspect_environment()
